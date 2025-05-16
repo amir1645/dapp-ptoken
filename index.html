@@ -1,0 +1,564 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PToken DApp</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React and ReactDOM -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <!-- Babel for JSX -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.22.9/babel.min.js"></script>
+  <!-- Web3.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/4.3.0/web3.min.js"></script>
+  <!-- Web3Modal and WalletConnect -->
+  <script src="https://unpkg.com/@web3modal/ethers@4.2.4/dist/index.umd.min.js"></script>
+  <script src="https://unpkg.com/ethers@6.13.2/dist/ethers.umd.min.js"></script>
+  <!-- react-d3-tree -->
+  <script src="https://unpkg.com/d3@7.8.5/dist/d3.min.js"></script>
+  <script src="https://unpkg.com/react-d3-tree@3.6.2/lib/index.umd.min.js"></script>
+  <!-- i18next and dependencies -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/i18next/23.7.6/i18next.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/i18next-browser-languagedetector/7.1.0/i18next-browser-languagedetector.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-i18next/14.0.0/react-i18next.min.js"></script>
+  <!-- Vazir Font for Persian -->
+  <link href="https://cdn.jsdelivr.net/npm/vazirmatn@33.0.3/Vazirmatn-font-face.css" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Vazirmatn', sans-serif;
+    }
+    .rtl {
+      direction: rtl;
+      text-align: right;
+    }
+  </style>
+</head>
+<body class="bg-gray-100">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    // i18next initialization
+    const { useTranslation, I18nextProvider } = ReactI18next;
+    i18next
+      .use(i18nextBrowserLanguageDetector)
+      .init({
+        resources: {
+          en: {
+            translation: {
+              "connect_wallet": "Connect Wallet",
+              "address": "Your Address",
+              "register": "Register",
+              "upline_address": "Upline Address",
+              "place_left": "Place on Left",
+              "place_right": "Place on Right",
+              "withdraw": "Withdraw",
+              "user_info": "User Info",
+              "id": "ID",
+              "wallet": "Wallet",
+              "upline": "Upline",
+              "left": "Left",
+              "right": "Right",
+              "balance_count": "Total Balances",
+              "cycle_balance_count": "Cycle Balances",
+              "saved_balance_count": "Saved Balances",
+              "left_count": "Left Count",
+              "right_count": "Right Count",
+              "pool_balance": "Pool Balance",
+              "current_cycle": "Current Cycle",
+              "cycle_duration": "Cycle Duration",
+              "hours": "hours",
+              "promotional_space": "Promotional Space",
+              "ad_content": "Join our community to earn rewards with PToken! Fast, secure, and scalable on Polygon.",
+              "switch_language": "Switch to Persian",
+              "error": "Error",
+              "success": "Success",
+              "loading": "Loading..."
+            }
+          },
+          fa: {
+            translation: {
+              "connect_wallet": "اتصال به کیف پول",
+              "address": "آدرس شما",
+              "register": "ثبت نام",
+              "upline_address": "آدرس آپلاین",
+              "place_left": "قرارگیری در سمت چپ",
+              "place_right": "قرارگیری در سمت راست",
+              "withdraw": "برداشت",
+              "user_info": "اطلاعات کاربر",
+              "id": "شناسه",
+              "wallet": "کیف پول",
+              "upline": "آپلاین",
+              "left": "چپ",
+              "right": "راست",
+              "balance_count": "تعداد کل بالانس‌ها",
+              "cycle_balance_count": "بالانس‌های چرخه",
+              "saved_balance_count": "بالانس‌های ذخیره‌شده",
+              "left_count": "تعداد سمت چپ",
+              "right_count": "تعداد سمت راست",
+              "pool_balance": "موجودی استخر",
+              "current_cycle": "چرخه کنونی",
+              "cycle_duration": "مدت چرخه",
+              "hours": "ساعت",
+              "promotional_space": "فضای تبلیغاتی",
+              "ad_content": "به جامعه ما بپیوندید تا با PToken پاداش کسب کنید! سریع، امن و مقیاس‌پذیر در پلیگان.",
+              "switch_language": "تغییر به انگلیسی",
+              "error": "خطا",
+              "success": "موفقیت",
+              "loading": "در حال بارگذاری..."
+            }
+          }
+        },
+        fallbackLng: 'en',
+        interpolation: { escapeValue: false }
+      });
+
+    // Smart Contract ABI
+    const contractABI = [
+      {
+        "inputs": [{"internalType": "address", "name": "_starter", "type": "address"}],
+        "stateMutability": "nonpayable",
+        "type": "constructor"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {"indexed": true, "internalType": "address", "name": "user", "type": "address"},
+          {"indexed": true, "internalType": "address", "name": "upline", "type": "address"},
+          {"indexed": false, "internalType": "bool", "name": "placeOnLeft", "type": "bool"}
+        ],
+        "name": "Registered",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {"indexed": true, "internalType": "uint256", "name": "cycleId", "type": "uint256"},
+          {"indexed": true, "internalType": "address", "name": "caller", "type": "address"},
+          {"indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256"}
+        ],
+        "name": "Withdrawn",
+        "type": "event"
+      },
+      {
+        "inputs": [],
+        "name": "acceptOwnership",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "currentCycleId",
+        "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "getCurrentCycleDuration",
+        "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "getPoolBalance",
+        "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [{"internalType": "address", "name": "userAddress", "type": "address"}],
+        "name": "getUser",
+        "outputs": [
+          {"internalType": "uint256", "name": "id", "type": "uint256"},
+          {"internalType": "address", "name": "wallet", "type": "address"},
+          {"internalType": "address", "name": "upline", "type": "address"},
+          {"internalType": "address", "name": "left", "type": "address"},
+          {"internalType": "address", "name": "right", "type": "address"},
+          {"internalType": "uint256", "name": "balanceCount", "type": "uint256"},
+          {"internalType": "uint256", "name": "lastBalanceReset", "type": "uint256"},
+          {"internalType": "uint256", "name": "cycleBalanceCount", "type": "uint256"},
+          {"internalType": "uint256", "name": "savedBalanceCount", "type": "uint256"},
+          {"internalType": "uint256", "name": "leftCount", "type": "uint256"},
+          {"internalType": "uint256", "name": "rightCount", "type": "uint256"}
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {"internalType": "address", "name": "upline", "type": "address"},
+          {"internalType": "bool", "name": "placeOnLeft", "type": "bool"}
+        ],
+        "name": "register",
+        "outputs": [],
+        "stateMutability": "payable",
+        "type": "function"
+      },
+      {
+        "inputs": [{"internalType": "address", "name": "newOwner", "type": "address"}],
+        "name": "transferOwnership",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [{"internalType": "uint256", "name": "cycleId", "type": "uint256"}],
+        "name": "withdraw",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      }
+    ];
+
+    // Real contract address
+    const contractAddress = "0x5Bf4F9E5B09B8bE4078fcC4Ca778A5Cb51E67035";
+
+    function App() {
+      const { t, i18n } = useTranslation();
+      const [account, setAccount] = React.useState(null);
+      const [contract, setContract] = React.useState(null);
+      const [provider, setProvider] = React.useState(null);
+      const [userInfo, setUserInfo] = React.useState(null);
+      const [poolBalance, setPoolBalance] = React.useState(0);
+      const [currentCycle, setCurrentCycle] = React.useState(0);
+      const [cycleDuration, setCycleDuration] = React.useState(0);
+      const [treeData, setTreeData] = React.useState(null);
+      const [uplineAddress, setUplineAddress] = React.useState("");
+      const [placeOnLeft, setPlaceOnLeft] = React.useState(true);
+      const [message, setMessage] = React.useState("");
+      const web3ModalRef = React.useRef(null);
+
+      // Initialize Web3Modal
+      React.useEffect(() => {
+        const projectId = 'your_walletconnect_project_id'; // TODO: Replace with your WalletConnect Project ID
+        const modal = Web3Modal.createWeb3Modal({
+          ethersConfig: Web3Modal.defaultConfig({
+            metadata: {
+              name: 'PToken DApp',
+              description: 'PToken DApp on Polygon',
+              url: window.location.href,
+              icons: ['https://via.placeholder.com/150']
+            }
+          }),
+          chains: [
+            {
+              chainId: 137,
+              name: 'Polygon Mainnet',
+              currency: 'MATIC',
+              explorerUrl: 'https://polygonscan.com',
+              rpcUrl: 'https://polygon-rpc.com'
+            },
+            {
+              chainId: 80001,
+              name: 'Polygon Mumbai',
+              currency: 'MATIC',
+              explorerUrl: 'https://mumbai.polygonscan.com',
+              rpcUrl: 'https://rpc-mumbai.maticvigil.com'
+            }
+          ],
+          projectId: projectId,
+          enableAnalytics: false
+        });
+        web3ModalRef.current = modal;
+      }, []);
+
+      // Connect wallet
+      async function connectWallet() {
+        try {
+          const { provider, address } = await web3ModalRef.current.connect();
+          const ethersProvider = new ethers.BrowserProvider(provider);
+          const web3 = new Web3(provider);
+          setProvider(ethersProvider);
+          setAccount(address);
+          const contractInstance = new web3.eth.Contract(contractABI, contractAddress);
+          setContract(contractInstance);
+          setMessage(`${t('success')}: کیف پول متصل شد`);
+        } catch (error) {
+          setMessage(`${t('error')}: ${error.message || 'اتصال به کیف پول ناموفق بود'}`);
+        }
+      }
+
+      // Fetch user info and pool data
+      React.useEffect(() => {
+        async function fetchData() {
+          if (contract && account) {
+            try {
+              const user = await contract.methods.getUser(account).call();
+              setUserInfo(user);
+              const pool = await contract.methods.getPoolBalance().call();
+              setPoolBalance(Web3.utils.fromWei(pool, 'ether'));
+              const cycle = await contract.methods.currentCycleId().call();
+              setCurrentCycle(cycle);
+              const duration = await contract.methods.getCurrentCycleDuration().call();
+              setCycleDuration(duration / 3600);
+              const tree = await buildTree(account);
+              setTreeData(tree);
+            } catch (error) {
+              setMessage(`${t('error')}: ${error.message}`);
+            }
+          }
+        }
+        fetchData();
+      }, [contract, account]);
+
+      // Build tree data for react-d3-tree
+      async function buildTree(address) {
+        if (!contract || !address || address === '0x0000000000000000000000000000000000000000') return null;
+        const user = await contract.methods.getUser(address).call();
+        const node = {
+          name: `${user.id}: ${address.slice(0, 6)}...${address.slice(-4)}`,
+          children: []
+        };
+        if (user.left !== '0x0000000000000000000000000000000000000000') {
+          const leftTree = await buildTree(user.left);
+          if (leftTree) node.children.push(leftTree);
+        }
+        if (user.right !== '0x0000000000000000000000000000000000000000') {
+          const rightTree = await buildTree(user.right);
+          if (rightTree) node.children.push(rightTree);
+        }
+        return node;
+      }
+
+      // Register user
+      async function register() {
+        if (!contract || !account) {
+          setMessage(`${t('error')}: لطفاً کیف پول را متصل کنید`);
+          return;
+        }
+        if (!Web3.utils.isAddress(uplineAddress)) {
+          setMessage(`${t('error')}: آدرس آپلاین نامعتبر است`);
+          return;
+        }
+        try {
+          await contract.methods.register(uplineAddress, placeOnLeft).send({
+            from: account,
+            value: Web3.utils.toWei('350', 'ether')
+          });
+          setMessage(`${t('success')}: ثبت‌نام با موفقیت انجام شد`);
+          const user = await contract.methods.getUser(account).call();
+          setUserInfo(user);
+          const tree = await buildTree(account);
+          setTreeData(tree);
+        } catch (error) {
+          setMessage(`${t('error')}: ${error.message}`);
+        }
+      }
+
+      // Withdraw funds
+      async function withdraw() {
+        if (!contract || !account) {
+          setMessage(`${t('error')}: لطفاً کیف پول را متصل کنید`);
+          return;
+        }
+        try {
+          await contract.methods.withdraw(currentCycle).send({ from: account });
+          setMessage(`${t('success')}: برداشت با موفقیت انجام شد`);
+          const pool = await contract.methods.getPoolBalance().call();
+          setPoolBalance(Web3.utils.fromWei(pool, 'ether'));
+          const cycle = await contract.methods.currentCycleId().call();
+          setCurrentCycle(cycle);
+          const user = await contract.methods.getUser(account).call();
+          setUserInfo(user);
+        } catch (error) {
+          setMessage(`${t('error')}: ${error.message}`);
+        }
+      }
+
+      // Switch language
+      function switchLanguage() {
+        i18n.changeLanguage(i18n.language === 'en' ? 'fa' : 'en');
+      }
+
+      return (
+        <div className={`container mx-auto p-4 ${i18n.language === 'fa' ? 'rtl' : ''}`}>
+          <header className="flex justify-between items-center mb-6">
+            <h1 className="text-3xl font-bold">PToken DApp</h1>
+            <div>
+              <button
+                onClick={connectWallet}
+                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mr-2"
+              >
+                {t('connect_wallet')}
+              </button>
+              <button
+                onClick={switchLanguage}
+                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+              >
+                {t('switch_language')}
+              </button>
+            </div>
+          </header>
+
+          {account && (
+            <div className="mb-4">
+              <p className="text-lg">{t('address')}: {account}</p>
+            </div>
+          )}
+
+          {message && (
+            <div className={`p-4 mb-4 rounded ${message.includes(t('error')) ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+              {message}
+            </div>
+          )}
+
+          {/* Register Section */}
+          <section className="mb-8 p-6 bg-white rounded shadow">
+            <h2 className="text-2xl font-semibold mb-4">{t('register')}</h2>
+            <div className="flex flex-col gap-4">
+              <input
+                type="text"
+                placeholder={t('upline_address')}
+                value={uplineAddress}
+                onChange={(e) => setUplineAddress(e.target.value)}
+                className="p-2 border rounded"
+              />
+              <div>
+                <label className="mr-4">
+                  <input
+                    type="radio"
+                    checked={placeOnLeft}
+                    onChange={() => setPlaceOnLeft(true)}
+                  />
+                  {t('place_left')}
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    checked={!placeOnLeft}
+                    onChange={() => setPlaceOnLeft(false)}
+                  />
+                  {t('place_right')}
+                </label>
+              </div>
+              <button
+                onClick={register}
+                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+              >
+                {t('register')}
+              </button>
+            </div>
+          </section>
+
+          {/* Withdraw Section */}
+          <section className="mb-8 p-6 bg-white rounded shadow">
+            <h2 className="text-2xl font-semibold mb-4">{t('withdraw')}</h2>
+            <button
+              onClick={withdraw}
+              className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600"
+            >
+              {t('withdraw')}
+            </button>
+          </section>
+
+          {/* User Info Section */}
+          {userInfo && (
+            <section className="mb-8 p-6 bg-white rounded shadow">
+              <h2 className="text-2xl font-semibold mb-4">{t('user_info')}</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <p><strong>{t('id')}:</strong> {userInfo.id}</p>
+                <p><strong>{t('wallet')}:</strong> {userInfo.wallet}</p>
+                <p><strong>{t('upline')}:</strong> {userInfo.upline}</p>
+                <p><strong>{t('left')}:</strong> {userInfo.left}</p>
+                <p><strong>{t('right')}:</strong> {userInfo.right}</p>
+                <p><strong>{t('balance_count')}:</strong> {userInfo.balanceCount}</p>
+                <p><strong>{t('cycle_balance_count')}:</strong> {userInfo.cycleBalanceCount}</p>
+                <p><strong>{t('saved_balance_count')}:</strong> {userInfo.savedBalanceCount}</p>
+                <p><strong>{t('left_count')}:</strong> {userInfo.leftCount}</p>
+                <p><strong>{t('right_count')}:</strong> {userInfo.rightCount}</p>
+              </div>
+            </section>
+          )}
+
+          {/* Pool and Cycle Info */}
+          <section className="mb-8 p-6 bg-white rounded shadow">
+            <h2 className="text-2xl font-semibold mb-4">{t('pool_balance')}</h2>
+            <p>{t('pool_balance')}: {poolBalance} MATIC</p>
+            <p>{t('current_cycle')}: {currentCycle}</p>
+            <p>{t('cycle_duration')}: {cycleDuration} {t('hours')}</p>
+          </section>
+
+          {/* Tree Diagram */}
+          {treeData && (
+            <section className="mb-8 p-6 bg-white rounded shadow">
+              <h2 className="text-2xl font-semibold mb-4">{t('user_info')}</h2>
+              <div style={{ height: '500px' }}>
+                <ReactD3Tree.Tree
+                  data={treeData}
+                  orientation="vertical"
+                  translate={{ x: 300, y: 50 }}
+                  zoomable={true}
+                  collapsible={true}
+                  pathFunc="diagonal"
+                />
+              </div>
+            </section>
+          )}
+
+          {/* Promotional Space */}
+          <section className="p-6 bg-gray-200 rounded">
+            <h2 className="text-2xl font-semibold mb-4">{t('promotional_space')}</h2>
+            <p>{t('ad_content')}</p>
+          </section>
+        </div>
+      );
+    }
+
+    // Wrap App with I18nextProvider
+    function Root() {
+      return (
+        <I18nextProvider i18n={i18next}>
+          <App />
+        </I18nextProvider>
+      );
+    }
+
+    // Render the app
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<Root />);
+  </script>
+</body>
+</html>
